@@ -1,14 +1,7 @@
-# Welcome to Chainlit! 🚀🤖
+# Natural Law: Your AI Legal & Moral Guide 🧠
 
-Hi there, Developer! 👋 We're excited to have you on board. Chainlit is a powerful tool designed to help you prototype, debug and share applications built on top of LLMs.
+### Hey There, I'm Natural law 👋
+- 🧠 **Legal Guide:** I'm your personal intelligent philosopher, trained on the brightest philosophical minds of the past.
+- 🤔 **Moral Guide:** Ask for my stance on something or anything related to the history of philosophy and I will assist!
 
-## Useful Links 🔗
-
-- **Documentation:** Get started with our comprehensive [Chainlit Documentation](https://docs.chainlit.io) 📚
-- **Discord Community:** Join our friendly [Chainlit Discord](https://discord.gg/ZThrUxbAYw) to ask questions, share your projects, and connect with other developers! 💬
-
-We can't wait to see what you create with Chainlit! Happy coding! 💻😊
-
-## Welcome screen
-
-To modify the welcome screen, edit the `chainlit.md` file at the root of your project. If you do not want a welcome screen, just leave this file empty.
+I can't wait to see what great things you come up with to ask me! I'm here to assist! 😊

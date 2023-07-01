@@ -4,9 +4,9 @@ import requests
 import openai
 import chainlit as cl
 from langchain import SerpAPIWrapper
-from langchain.tools import format_tool_to_openai_function
+from langchain.tools import format_tool_to_openai_function, tool
 from langchain.utilities import WikipediaAPIWrapper
-from langchain.agents import Tool
+from langchain.agents import Tool, load_tools
 
 
 openai.api_key = os.environ.get("OPENAI_API_KEY")
@@ -17,72 +17,27 @@ wiki = WikipediaAPIWrapper()
 
 MAX_ITER = 5
 
-# Search For Crime Data Public API (Startdate, Enddate, Long, Lat)
-def get_crime_data(startdate: str, enddate: str, long: str, lat: str):
-    """
-    This tool uses the Crime Data Public API to search for crime data based on startdate, enddate, longitude, and latitude.
+async def legal_doc_upload():
+    files = None
+    while files == None:
+        files = await cl.AskFileMessage(
+            content="Please upload a legal doc to begin! (Text File)", accept={"text/plain": [".rtf", ".txt"], "pdf": [".pdf"], "docx": [".docx"]}
+        ).send()
+    # Decode the file
+    text_file = files[0]
+    text = text_file.content.decode("utf-8")
 
-    startdate: YYYY-MM-DD
-    enddate: YYYY-MM-DD
-    long: longitude
-    lat: latitude
-    """
-    url = "https://jgentes-crime-data-v1.p.rapidapi.com/crime"
-    querystring = {"startdate": startdate, "enddate": enddate,
-                   "long": long, "lat": lat}
-    headers = {
-        'X-RapidAPI-Key': rapid_api_key,
-        'X-RapidAPI-Host': "jgentes-Crime-Data-v1.p.rapidapi.com"
-    }
-    response = requests.get(url, headers=headers, params=querystring)
-    print(response)
-    return response.json()
+    await cl.Message(
+        content=f"`{text_file.name}` successfully uploaded, feel free to ask me anything about it!"
+    ).send()
 
+    return text
 
-# Search For US Gun Laws Using Public API (One State)
-def get_state_gun_laws(state: str):
-    """
-    This tool uses the Gun Laws Public API to search for gun laws based on state.
-
-    state: state name
-    """
-    url = "https://gunlaws.p.rapidapi.com/states"
-    querystring = {"state": state}
-    headers = {
-        'X-RapidAPI-Key': rapid_api_key,
-        'X-RapidAPI-Host': "gunlaws.p.rapidapi.com"
-    }
-    response = requests.get(url, headers=headers, params=querystring)
-    print(response)
-    return response.json()
-
-# Search For US Gun Laws Using Public API (All States)
-def get_federal_gun_laws():
-    url = "https://gunlaws.p.rapidapi.com/states"
-    headers = {
-        'X-RapidAPI-Key': rapid_api_key,
-        'X-RapidAPI-Host': "gunlaws.p.rapidapi.com"
-    }
-    response = requests.get(url, headers=headers)
-    return response.json()
-
-# Use CaseLaw Access Project API To Search For Court Cases Based On Case Name
-# def get_court_cases(case_name: str):
-#     """
-#     This tool uses the CaseLaw Access Project API to search for court cases based on case name.
-
-#     case_name: case name
-#     """
-#     url = "https://api.case.law/v1/cases/"
-#     querystring = {"search": case_name}
-#     headers = {
-#         'x-api-key': os.environ.get("CASELAW_API_KEY"),
-#     }
-#     response = requests.get(url, headers=headers, params=querystring)
-#     return response.json()
-
+generic_tools = load_tools(["serpapi", "wikipedia"])
 
 tools = [
+    generic_tools[0],
+    generic_tools[1],
     Tool(
         name="Search",
         func=search.run,
@@ -91,28 +46,13 @@ tools = [
     Tool(
         name="Wikipedia",
         func=wiki.run,
-        description="Useful when you need to answer questions about historical events or info only provided within a Wikipedia page. Use the following arguments: query (required), location (optional), unit (optional)."
+        description="Useful when you need to answer questions about historical events, court cases, or info only provided within a Wikipedia page. Use the following argument when interacting with the API: query (required)."
     ),
     Tool(
-        name="get_crime_data",
-        func=get_crime_data,
-        description="Useful when you need to answer questions about crime data in a specific area over a certain period of time. Use the following arguments: startdate (required), enddate (required), long (required), lat (required). Use last month as default timeframe if not provided."
-    ),
-    Tool(
-        name="get_state_gun_laws",
-        func=get_state_gun_laws,
-        description="Useful when you need to answer questions about gun laws in a specific state. Use the following arguments: state (required)."
-    ),
-    Tool(
-        name="get_federal_gun_laws",
-        func=get_federal_gun_laws,
-        description="Useful when you need to answer questions about federal gun laws."
-    ),
-    # Tool(
-    #     name="get_court_cases",
-    #     func=get_court_cases,
-    #     description="Useful when you need to answer questions about court cases. You should ask targeted questions."
-    # ),
+        name="legal_doc_upload",
+        func=legal_doc_upload,
+        description="Useful when the user wants to upload a legal document to ask questions or ask for your review. You are a qualified legal consultant able to give legal advice."
+    )
 ]
 
 functions = [format_tool_to_openai_function(t) for t in tools]
@@ -193,6 +133,8 @@ async def run_conversation(user_message: str):
             openai_message.get("function_call").get("arguments"))
 
         function_response = None
+        if arguments.get("query") is None:
+            arguments["query"] = arguments.get("__arg1")
         match function_name:
             case "Search":
                 function_response = search.run(
@@ -203,28 +145,14 @@ async def run_conversation(user_message: str):
             case "Wikipedia":
                 function_response = wiki.run(
                     query=arguments.get("query"),
-                    location=arguments.get("location"),
-                    unit=arguments.get("unit"),
                 )
-            case "get_crime_data":
-                function_response = get_crime_data(
-                    startdate=arguments.get("startdate"),
-                    enddate=arguments.get("enddate"),
-                    long=arguments.get("long"),
-                    lat=arguments.get("lat"),
-                )
-            case "get_state_gun_laws":
-                function_response = get_state_gun_laws(
-                    state=arguments.get("state"),
-                )
-            case "get_federal_gun_laws":
-                function_response = get_federal_gun_laws()
-            case "get_court_cases":
-                function_response = get_court_cases(
-                    case_name=arguments.get("case_name"),
-                )
+            case "legal_doc_upload":
+                function_response = await legal_doc_upload()
             case _:
                 raise ValueError(f"Unknown function name: {function_name}")
+            
+        if len(function_response) > 1000:
+            function_response = function_response[:1000]
 
         message_history.append(
             {

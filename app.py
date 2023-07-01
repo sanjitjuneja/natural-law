@@ -1,16 +1,14 @@
 import ast
 import os
-import requests
 import openai
 import chainlit as cl
 from langchain import SerpAPIWrapper
-from langchain.tools import format_tool_to_openai_function, tool
+from langchain.tools import format_tool_to_openai_function
 from langchain.utilities import WikipediaAPIWrapper
 from langchain.agents import Tool, load_tools
 
 
 openai.api_key = os.environ.get("OPENAI_API_KEY")
-rapid_api_key = os.environ.get("RAPID_API_KEY")
 
 search = SerpAPIWrapper()
 wiki = WikipediaAPIWrapper()

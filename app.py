@@ -1,5 +1,9 @@
 import ast
 import os
+import asyncio
+import PyPDF2
+from docx import Document
+from io import BytesIO
 import openai
 import chainlit as cl
 from langchain import SerpAPIWrapper
@@ -62,7 +66,10 @@ async def legal_doc_upload():
     # Wait for the user to upload a file
     while files == None:
         files = await cl.AskFileMessage(
-            content="Please upload a text file to begin!", accept=["text/plain"]
+            content="Please upload a file to begin (PDF, Text File, or Word Doc)!", 
+            accept=["text/plain", "text/*", "application/*", "application/pdf", 
+                    "application/msword", 
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
         ).send()
 
     file = files[0]
@@ -70,11 +77,34 @@ async def legal_doc_upload():
     msg = cl.Message(content=f"Processing `{file.name}`...")
     await msg.send()
 
-    # Decode the file
-    text = file.content.decode("utf-8")
+    # Decode the file depending on file type
+    if file.type == "text/plain":
+        text = file.content.decode("utf-8")
+
+    elif file.type == "application/pdf":
+        def decode_pdf(file_content):
+            with BytesIO(file_content) as f:
+                reader = PyPDF2.PdfReader(f)
+                content = []
+                for page in range(len(reader.pages)):
+                    content.append(reader.pages[page].extract_text())
+            return '\n'.join(content)
+        
+        loop = asyncio.get_event_loop()
+        text = await loop.run_in_executor(None, decode_pdf, file.content)
+
+    elif file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        def decode_docx(file_content):
+            with BytesIO(file_content) as f:
+                doc = Document(f)
+                return '\n'.join([para.text for para in doc.paragraphs])
+                
+        loop = asyncio.get_event_loop()
+        text = await loop.run_in_executor(None, decode_docx, file.content)
+
 
     # Split the text into chunks
-    texts = text_splitter.split_text(text)
+    texts = text_splitter.split_text(text) 
 
     # Create a metadata for each chunk
     metadatas = [{"source": f"{i}-pl"} for i in range(len(texts))]

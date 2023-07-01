@@ -2,3 +2,4 @@ chainlit
 langchain
 openai
 google-search-results
+chromadb

@@ -5,3 +5,4 @@ google-search-results
 chromadb
 pypdf2
 python-docx
+wikipedia

@@ -1,4 +1,4 @@
-# Natural Law: Your AI Legal & Moral Guide 🧠 (https://naturallaw.ai)
+## Natural Law: Your AI Legal & Moral Guide 🧠 (https://naturallaw.ai)
 
 - 🧠 **Legal Guide:** Your personal intelligent legal advisor, trained on the most relevant legal of the past and current times.
 - 🤔 **Moral Guide:** Ask for my stance on something or anything related to the history of philosophy and I will assist!
